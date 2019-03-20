@@ -1,5 +1,7 @@
 # LZJD
 
+[Documentation](https://docs.rs/lzjd)
+
 Rust implementation of Lempel-Ziv Jaccard Distance (LZJD) algorithm based on [jLZJD](https://github.com/EdwardRaff/jLZJD)
 
 Main differences:
