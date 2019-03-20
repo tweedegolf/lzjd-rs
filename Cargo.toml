@@ -9,6 +9,7 @@ readme = "README.md"
 keywords = ["lzjd", "edit", "distance", "Lempel", "Lev"]
 categories = ["algorithms","compression","cryptography","filesystem","science"]
 license = "GPL-3.0"
+repository = "https://github.com/hdoordt/lzjd-rs"
 
 [dependencies]
 clap = "2.32.0"
