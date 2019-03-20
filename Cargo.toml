@@ -1,0 +1,21 @@
+[package]
+name = "lzjd"
+version = "0.1.0"
+authors = ["Henk Dieter <henkdieter@tweedegolf.com>"]
+edition = "2018"
+exclude = ["in/*"]
+
+[dependencies]
+clap = "2.32.0"
+base64 = "0.10.1"
+failure = "0.1.5"
+failure_derive = "0.1.5"
+bincode = "1.1.2"
+crc = "1.8.1"
+walkdir = "2.2.7"
+num_cpus = "1.10.0"
+rayon = "1.0.3"
+
+[dev-dependencies]
+rand = "0.6.5"
+

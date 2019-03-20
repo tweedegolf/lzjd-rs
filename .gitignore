@@ -1,0 +1,9 @@
+target
+.idea
+*.code-workspace
+launch.json
+massif.out.*
+callgrind.out.*
+in
+out
+perf.data*
