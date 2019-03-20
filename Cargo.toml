@@ -4,6 +4,11 @@ version = "0.1.0"
 authors = ["Henk Dieter <henkdieter@tweedegolf.com>"]
 edition = "2018"
 exclude = ["in/*"]
+description = "Rust implementation of the LZJD algorithm (https://github.com/EdwardRaff/jLZJD)"
+readme = "README.md"
+keywords = ["lzjd", "edit", "distance", "Lempel", "Lev"]
+categories = ["algorithms","compression","cryptography","filesystem","science"]
+license = "GPL-3.0"
 
 [dependencies]
 clap = "2.32.0"
@@ -18,4 +23,5 @@ rayon = "1.0.3"
 
 [dev-dependencies]
 rand = "0.6.5"
+
 
