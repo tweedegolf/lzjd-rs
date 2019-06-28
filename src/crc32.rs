@@ -19,12 +19,12 @@ impl CRC32Hasher {
 }
 
 impl Hasher for CRC32Hasher {
-    fn write(&mut self, bytes: &[u8]) {
-        Hasher32::write(&mut self.digest, bytes);
-    }
-
     fn finish(&self) -> u64 {
         u64::from(self.digest.sum32())
+    }
+
+    fn write(&mut self, bytes: &[u8]) {
+        Hasher32::write(&mut self.digest, bytes);
     }
 }
 
