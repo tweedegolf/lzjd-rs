@@ -10,11 +10,11 @@ use std::collections::HashSet;
 pub struct LZDict {
     // Once const generics are stablilized, entries can be an array
     // and the crate can become no_std
-    entries: Vec<u64>,
+    entries: Vec<i64>,
 }
 
 impl LZDict {
-    /// Converts a base64 string into a Vec<u64> and wraps a LZDict around it.
+    /// Converts a base64 string into a Vec<i64> and wraps a LZDict around it.
     pub fn from_base64_string(b64: &str) -> Result<Self> {
         let bytes = base64::decode(b64)?;
         let mut entries = vec![];
@@ -56,21 +56,23 @@ impl LZDict {
             }
         }
 
-        let mut hashes = Vec::new();
+        let mut hashes: Vec<i64> = Vec::new();
         let mut hasher = build_hasher.build_hasher();
 
         for i in 1..dict.len() {
             Self::hash_entry(i, &dict, &mut hasher);
             let hash = hasher.finish();
+            let serializedHash: &[u8]  = &bincode::serialize(&hash).unwrap();
+            let hash_i64: i64 = bincode::deserialize(serializedHash).unwrap();
             hasher = build_hasher.build_hasher();
 
-            if let Err(insert_at) = hashes.binary_search(&hash) {
+            if let Err(insert_at) = hashes.binary_search(&hash_i64) {
                 if hashes.len() < 1024 {
-                    hashes.insert(insert_at, hash); // Insert current hash
-                } else if hash < *hashes.last().unwrap() {
+                    hashes.insert(insert_at, hash_i64); // Insert current hash
+                } else if hash_i64 < *hashes.last().unwrap() {
                     hashes.pop(); // Remove greatest hash
 
-                    hashes.insert(insert_at, hash); // Insert current hash
+                    hashes.insert(insert_at, hash_i64); // Insert current hash
                 }
             }
         }
@@ -98,8 +100,9 @@ impl LZDict {
         for byte in seq_iter {
             hasher.write_u8(byte);
             let hash = hasher.finish();
-
-            if dict.insert(hash) {
+            let serializedHash: &[u8]  = &bincode::serialize(&hash).unwrap();
+            let hash_i64: i64 = bincode::deserialize(serializedHash).unwrap();
+            if dict.insert(hash_i64) {
                 hasher = build_hasher.build_hasher();
             }
         }
@@ -162,22 +165,22 @@ impl LZDict {
 }
 
 impl Deref for LZDict {
-    type Target = Vec<u64>;
+    type Target = Vec<i64>;
 
     fn deref(&self) -> &Self::Target {
         &self.entries
     }
 }
 
-impl From<Vec<u64>> for LZDict {
-    fn from(mut entries: Vec<u64>) -> Self {
+impl From<Vec<i64>> for LZDict {
+    fn from(mut entries: Vec<i64>) -> Self {
         entries.sort();
         entries.truncate(1024);
         Self { entries }
     }
 }
 
-impl From<LZDict> for Vec<u64> {
+impl From<LZDict> for Vec<i64> {
     fn from(item: LZDict) -> Self {
         item.entries
     }
@@ -221,12 +224,12 @@ mod tests {
 
     #[test]
     fn test_jaccard_similarity() {
-        const A_ENTRIES: [u64; 4] = [0, 1, 2, 3];
-        const B_ENTRIES: [u64; 3] = [0, 1, 2];
-        const C_ENTRIES: [u64; 4] = [1, 2, 3, 4];
-        const D_ENTRIES: [u64; 0] = [];
-        const E_ENTRIES: [u64; 4] = [4, 5, 6, 7];
-        const F_ENTRIES: [u64; 5] = [0, 1, 2, 3, 5];
+        const A_ENTRIES: [i64; 4] = [0, 1, 2, 3];
+        const B_ENTRIES: [i64; 3] = [0, 1, 2];
+        const C_ENTRIES: [i64; 4] = [1, 2, 3, 4];
+        const D_ENTRIES: [i64; 0] = [];
+        const E_ENTRIES: [i64; 4] = [4, 5, 6, 7];
+        const F_ENTRIES: [i64; 5] = [0, 1, 2, 3, 5];
 
         const UNION_A_A_LEN: usize = 4;
         const UNION_A_B_LEN: usize = 4;
