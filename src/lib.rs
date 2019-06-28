@@ -45,8 +45,8 @@
 //! 
 //! let build_hasher = CRC32BuildHasher;
 //!
-//! let dict_a = LZDict::from_bytes_stream(stream_a, &build_hasher, k);
-//! let dict_b = LZDict::from_bytes_stream(stream_b, &build_hasher, k);
+//! let dict_a = LZDict::from_bytes_stream(stream_a, &build_hasher);
+//! let dict_b = LZDict::from_bytes_stream(stream_b, &build_hasher);
 //!
 //! let lzjd = dict_a.dist(&dict_b);
 //! 
@@ -61,7 +61,10 @@ use std::io;
 
 /// LZ dictionary implementation
 pub mod lz_dict;
+/// crc32 wrapper;
 pub mod crc32;
+/// murmur3 wrapper;
+pub mod murmur3;
 
 #[derive(Debug, Fail)]
 pub enum LZJDError {
@@ -121,12 +124,10 @@ mod tests {
         let c = b"totally_different";
         let d = b"THIS IS A DIFFERENT TEST SEQUENCE";
 
-        let k = 1024;
-
-        let dict_a = LZDict::from_bytes_stream(a.iter().cloned(), &build_hasher, k);
-        let dict_b = LZDict::from_bytes_stream(b.iter().cloned(), &build_hasher, k);
-        let dict_c = LZDict::from_bytes_stream(c.iter().cloned(), &build_hasher, k);
-        let dict_d = LZDict::from_bytes_stream(d.iter().cloned(), &build_hasher, k);
+        let dict_a = LZDict::from_bytes_stream(a.iter().cloned(), &build_hasher);
+        let dict_b = LZDict::from_bytes_stream(b.iter().cloned(), &build_hasher);
+        let dict_c = LZDict::from_bytes_stream(c.iter().cloned(), &build_hasher);
+        let dict_d = LZDict::from_bytes_stream(d.iter().cloned(), &build_hasher);
 
         assert!(
             dict_a.dist(&dict_b).abs() < EPSILON, // dist(a, b) == 0

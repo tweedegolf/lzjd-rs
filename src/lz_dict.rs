@@ -2,6 +2,7 @@ use crate::Result;
 use core::hash::BuildHasher;
 use core::hash::Hasher;
 use core::ops::Deref;
+use std::fmt::Debug;
 
 /// A sorted list of the k smallest LZSet hashes
 #[derive(Debug)]
@@ -31,40 +32,50 @@ impl LZDict {
 
         Ok(Self { entries })
     }
-
     /// Creates a LZ dictionary containing the smallest k hashes
     /// of LZ sequences obtained from seq_iter.
-    pub fn from_bytes_stream<I, H>(seq_iter: I, build_hasher: &H, k: usize) -> Self
-    where
-        I: Iterator<Item = u8>,
-        H: BuildHasher,
+    /// Based on LZ78 as described in https://en.wikipedia.org/wiki/LZ77_and_LZ78#LZ78
+    pub fn from_bytes_stream<I, H>(seq_iter: I, build_hasher: &H) -> Self
+        where
+            I: Iterator<Item=u8>,
+            H: BuildHasher,
     {
-        let mut entries = Vec::with_capacity(k);
+        let mut dict: Vec<(usize, u8)> = Vec::new();
+        let mut last_matching_index: usize = 0;
+        dict.push((0, 0));
+
+        for item in seq_iter {
+            if let Some(index) = dict.iter().position(
+                |(lmi, i)| lmi == &last_matching_index && i == &item
+            ) {
+                last_matching_index = index;
+            } else {
+                dict.push((last_matching_index, item));
+                last_matching_index = 0;
+            }
+        }
+
+        let mut hashes = Vec::new();
         let mut hasher = build_hasher.build_hasher();
 
-        seq_iter.for_each(|byte| {
-            // Update hash
-            hasher.write_u8(byte);
+
+        for i in 0..dict.len() {
+            Self::hash_entry(i, &dict, &mut hasher);
             let hash = hasher.finish();
+            hasher = build_hasher.build_hasher();
 
-            if let Err(insert_at) = entries.binary_search(&hash) {
-                // If entries does not yet contain current hash
-                if entries.len() < k {
-                    // There's room for another hash without reallocating
-                    entries.insert(insert_at, hash); // Insert current hash
-                    hasher = build_hasher.build_hasher(); // Reset hasher
-                } else if hash < *entries.last().unwrap() {
-                    // Current hash is smaller than largest in entries
-                    entries.pop(); // Remove greatest hash
+            if let Err(insert_at) = hashes.binary_search(&hash) {
+                if hashes.len() < 1024 {
+                    hashes.insert(insert_at, hash); // Insert current hash
+                } else if hash < *hashes.last().unwrap() {
+                    hashes.pop(); // Remove greatest hash
 
-                    entries.insert(insert_at, hash); // Insert current hash
-                    hasher = build_hasher.build_hasher(); // Reset hasher
+                    hashes.insert(insert_at, hash); // Insert current hash
                 }
             }
-            // else it's already in there and we can go on
-        });
+        }
 
-        LZDict { entries }
+        LZDict { entries: hashes }
     }
 
     fn intersection_len(&self, other: &Self) -> usize {
@@ -163,10 +174,10 @@ mod tests {
 
     #[test]
     fn test_from_bytes_iter() {
-        let sequence = b"TESTSEQUENCETESTTESTTTTTEESSTT".to_vec();
+        let sequence = b"TESTSEQUENCETESTTESTTTTTEESSTT";
         let k = 10;
         let build_hasher = CRC32BuildHasher;
-        let lz_dict = LZDict::from_bytes_stream(sequence.iter().cloned(), &build_hasher, k);
+        let lz_dict = LZDict::from_bytes_stream(sequence.iter().cloned(), &build_hasher);
 
         assert!(
             is_sorted_and_unique(&lz_dict),
