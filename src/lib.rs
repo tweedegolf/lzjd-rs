@@ -14,7 +14,7 @@
 //! # pub struct CRC32Hasher {
 //! #   digest: crc::crc32::Digest,
 //! # }
-//! # 
+//! #
 //! # impl CRC32Hasher {
 //! #     fn new() -> Self {
 //! #       Self {
@@ -32,7 +32,7 @@
 //! # }
 //! # #[derive(Clone)]
 //! # pub struct CRC32BuildHasher;
-//! # 
+//! #
 //! # impl BuildHasher for CRC32BuildHasher {
 //! #   type Hasher = CRC32Hasher;
 //! #   fn build_hasher(&self) -> Self::Hasher {
@@ -42,14 +42,14 @@
 //! let stream_a = b"bitsandpieces".iter().cloned();
 //! let stream_b = b"doctestbits".iter().cloned();
 //! let k = 1024;
-//! 
+//!
 //! let build_hasher = CRC32BuildHasher;
 //!
 //! let dict_a = LZDict::from_bytes_stream(stream_a, &build_hasher);
 //! let dict_b = LZDict::from_bytes_stream(stream_b, &build_hasher);
 //!
 //! let lzjd = dict_a.dist(&dict_b);
-//! 
+//!
 //! assert_eq!(lzjd, 0.57142854);
 //! ```
 
@@ -96,6 +96,12 @@ impl From<base64::DecodeError> for LZJDError {
 impl From<bincode::Error> for LZJDError {
     fn from(err: bincode::Error) -> Self {
         LZJDError::Bincode { err }
+    }
+}
+
+impl From<std::io::Error> for LZJDError {
+    fn from(err: std::io::Error) -> Self {
+        LZJDError::Io { err }
     }
 }
 

@@ -8,7 +8,6 @@ extern crate failure_derive;
 mod crc32;
 mod murmur3;
 
-use crc32::CRC32BuildHasher;
 use murmur3::Murmur3BuildHasher;
 
 use lzjd::{LZDict, LZJDError};
@@ -24,8 +23,6 @@ use std::rc::Rc;
 use clap::{App, Arg};
 use rayon::prelude::*;
 use walkdir::WalkDir;
-
-const K: usize = 1024;
 
 #[derive(Debug, Fail)]
 enum Error {

@@ -2,7 +2,6 @@ use crate::Result;
 use core::hash::BuildHasher;
 use core::hash::Hasher;
 use core::ops::Deref;
-use std::fmt::Debug;
 use std::collections::HashSet;
 
 /// A sorted list of the k smallest LZSet hashes
@@ -10,7 +9,7 @@ use std::collections::HashSet;
 pub struct LZDict {
     // Once const generics are stablilized, entries can be an array
     // and the crate can become no_std
-    entries: Vec<i64>,
+    entries: Vec<i32>,
 }
 
 impl LZDict {
@@ -56,23 +55,21 @@ impl LZDict {
             }
         }
 
-        let mut hashes: Vec<i64> = Vec::new();
+        let mut hashes: Vec<i32> = Vec::new();
         let mut hasher = build_hasher.build_hasher();
 
         for i in 1..dict.len() {
             Self::hash_entry(i, &dict, &mut hasher);
-            let hash = hasher.finish();
-            let serializedHash: &[u8]  = &bincode::serialize(&hash).unwrap();
-            let hash_i64: i64 = bincode::deserialize(serializedHash).unwrap();
+            let hash = hasher.finish() as i32;
             hasher = build_hasher.build_hasher();
 
-            if let Err(insert_at) = hashes.binary_search(&hash_i64) {
+            if let Err(insert_at) = hashes.binary_search(&hash) {
                 if hashes.len() < 1024 {
-                    hashes.insert(insert_at, hash_i64); // Insert current hash
-                } else if hash_i64 < *hashes.last().unwrap() {
+                    hashes.insert(insert_at, hash); // Insert current hash
+                } else if hash < *hashes.last().unwrap() {
                     hashes.pop(); // Remove greatest hash
 
-                    hashes.insert(insert_at, hash_i64); // Insert current hash
+                    hashes.insert(insert_at, hash); // Insert current hash
                 }
             }
         }
@@ -99,10 +96,8 @@ impl LZDict {
 
         for byte in seq_iter {
             hasher.write_u8(byte);
-            let hash = hasher.finish();
-            let serializedHash: &[u8]  = &bincode::serialize(&hash).unwrap();
-            let hash_i64: i64 = bincode::deserialize(serializedHash).unwrap();
-            if dict.insert(hash_i64) {
+            let hash = hasher.finish() as i32;
+            if dict.insert(hash) {
                 hasher = build_hasher.build_hasher();
             }
         }
@@ -165,22 +160,22 @@ impl LZDict {
 }
 
 impl Deref for LZDict {
-    type Target = Vec<i64>;
+    type Target = Vec<i32>;
 
     fn deref(&self) -> &Self::Target {
         &self.entries
     }
 }
 
-impl From<Vec<i64>> for LZDict {
-    fn from(mut entries: Vec<i64>) -> Self {
+impl From<Vec<i32>> for LZDict {
+    fn from(mut entries: Vec<i32>) -> Self {
         entries.sort();
         entries.truncate(1024);
         Self { entries }
     }
 }
 
-impl From<LZDict> for Vec<i64> {
+impl From<LZDict> for Vec<i32> {
     fn from(item: LZDict) -> Self {
         item.entries
     }
