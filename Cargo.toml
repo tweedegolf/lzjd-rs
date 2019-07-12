@@ -25,3 +25,8 @@ rayon = "1.0.3"
 
 [dev-dependencies]
 rand = "0.6.5"
+criterion = "0.2.10"
+
+[[bench]]
+name = "lzjd"
+harness = false
