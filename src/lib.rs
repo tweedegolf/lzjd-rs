@@ -50,7 +50,7 @@
 //!
 //! let lzjd = dict_a.dist(&dict_b);
 //!
-//! assert_eq!(lzjd, 0.57142854);
+//! assert_eq!(lzjd, 0.5714285714285714);
 //! ```
 
 #[macro_use]
