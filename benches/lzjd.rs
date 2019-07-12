@@ -25,8 +25,8 @@ fn bench_dist(c: &mut Criterion) {
         let seq_a = generate_byte_sequence();
         let seq_b = generate_byte_sequence();
         b.iter(move || {
-            let dict_a = LZDict::from_bytes_stream(seq_a.iter().cloned(), &build_hasher, 1024);
-            let dict_b = LZDict::from_bytes_stream(seq_b.iter().cloned(), &build_hasher, 1024);
+            let dict_a = LZDict::from_bytes_stream(seq_a.iter().cloned(), &build_hasher);
+            let dict_b = LZDict::from_bytes_stream(seq_b.iter().cloned(), &build_hasher);
 
             dict_a.dist(&dict_b);
         })

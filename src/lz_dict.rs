@@ -205,7 +205,6 @@ mod tests {
     #[test]
     fn test_from_bytes_iter() {
         let sequence = b"TESTSEQUENCETESTTESTTTTTEESSTT";
-        let k = 10;
         let build_hasher = CRC32BuildHasher;
         let lz_dict = LZDict::from_bytes_stream(sequence.iter().cloned(), &build_hasher);
 
@@ -213,8 +212,6 @@ mod tests {
             is_sorted_and_unique(&lz_dict),
             "Entries of dictionary are either not sorted or not unique"
         );
-
-        assert!(lz_dict.len() <= k);
     }
 
     #[test]
