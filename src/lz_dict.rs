@@ -219,12 +219,12 @@ mod tests {
 
     #[test]
     fn test_jaccard_similarity() {
-        const A_ENTRIES: [i64; 4] = [0, 1, 2, 3];
-        const B_ENTRIES: [i64; 3] = [0, 1, 2];
-        const C_ENTRIES: [i64; 4] = [1, 2, 3, 4];
-        const D_ENTRIES: [i64; 0] = [];
-        const E_ENTRIES: [i64; 4] = [4, 5, 6, 7];
-        const F_ENTRIES: [i64; 5] = [0, 1, 2, 3, 5];
+        const A_ENTRIES: [i32; 4] = [0, 1, 2, 3];
+        const B_ENTRIES: [i32; 3] = [0, 1, 2];
+        const C_ENTRIES: [i32; 4] = [1, 2, 3, 4];
+        const D_ENTRIES: [i32; 0] = [];
+        const E_ENTRIES: [i32; 4] = [4, 5, 6, 7];
+        const F_ENTRIES: [i32; 5] = [0, 1, 2, 3, 5];
 
         const UNION_A_A_LEN: usize = 4;
         const UNION_A_B_LEN: usize = 4;

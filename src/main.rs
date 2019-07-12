@@ -36,6 +36,11 @@ enum Error {
         #[cause]
         err: walkdir::Error,
     },
+    #[fail(display = "ThreadPoolBuild error: {}", err)]
+    ThreadPoolBuild {
+        #[cause]
+        err: rayon::ThreadPoolBuildError,
+    },
     #[fail(display = "{}", err)]
     LZJD {
         #[cause]
@@ -55,6 +60,12 @@ impl From<walkdir::Error> for Error {
     }
 }
 
+impl From<rayon::ThreadPoolBuildError> for Error {
+    fn from(err: rayon::ThreadPoolBuildError) -> Self {
+        Error::ThreadPoolBuild { err }
+    }
+}
+
 impl From<LZJDError> for Error {
     fn from(err: LZJDError) -> Self {
         Error::LZJD { err }
@@ -64,6 +75,8 @@ impl From<LZJDError> for Error {
 type Result<T> = std::result::Result<T, Error>;
 
 fn main() {
+    let cpus = &num_cpus::get().to_string();
+
     let matches = App::new("LZJD")
         .version("1.0")
         .author("Henk Dieter Oordt <henkdieter@tweedegolf.com>")
@@ -99,6 +112,15 @@ fn main() {
                 .value_name("THRESHOLD"),
         )
         .arg(
+            Arg::with_name("threads")
+                .short("p")
+                .long("--threads")
+                .help("restrict compute threads to N threads")
+                .takes_value(true)
+                .default_value(cpus)
+                .value_name("THREADS")
+        )
+        .arg(
             Arg::with_name("output")
                 .short("o")
                 .long("output")
@@ -131,6 +153,12 @@ fn run(matches: clap::ArgMatches) -> Result<()> {
         .unwrap_or(Some(1))
         .unwrap();
 
+    let num_threads = matches
+        .value_of("threads")
+        .map(|p| p.parse::<usize>().ok())
+        .unwrap_or(Some(4))
+        .unwrap();
+
     let input_paths: Vec<PathBuf> = if deep {
         matches.args["input"]
             .vals
@@ -159,6 +187,8 @@ fn run(matches: clap::ArgMatches) -> Result<()> {
     };
 
     let output_path = matches.value_of("output").map(PathBuf::from);
+
+    rayon::ThreadPoolBuilder::new().num_threads(num_threads).build_global()?;
 
     let mut writer = create_out_writer(&output_path)?;
 
