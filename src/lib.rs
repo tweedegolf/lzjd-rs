@@ -14,7 +14,7 @@
 //! # pub struct CRC32Hasher {
 //! #   digest: crc::crc32::Digest,
 //! # }
-//! # 
+//! #
 //! # impl CRC32Hasher {
 //! #     fn new() -> Self {
 //! #       Self {
@@ -32,7 +32,7 @@
 //! # }
 //! # #[derive(Clone)]
 //! # pub struct CRC32BuildHasher;
-//! # 
+//! #
 //! # impl BuildHasher for CRC32BuildHasher {
 //! #   type Hasher = CRC32Hasher;
 //! #   fn build_hasher(&self) -> Self::Hasher {
@@ -42,14 +42,14 @@
 //! let stream_a = b"bitsandpieces".iter().cloned();
 //! let stream_b = b"doctestbits".iter().cloned();
 //! let k = 1024;
-//! 
+//!
 //! let build_hasher = CRC32BuildHasher;
 //!
-//! let dict_a = LZDict::from_bytes_stream(stream_a, &build_hasher, k);
-//! let dict_b = LZDict::from_bytes_stream(stream_b, &build_hasher, k);
+//! let dict_a = LZDict::from_bytes_stream(stream_a, &build_hasher);
+//! let dict_b = LZDict::from_bytes_stream(stream_b, &build_hasher);
 //!
 //! let lzjd = dict_a.dist(&dict_b);
-//! 
+//!
 //! assert_eq!(lzjd, 0.57142854);
 //! ```
 
@@ -61,7 +61,10 @@ use std::io;
 
 /// LZ dictionary implementation
 pub mod lz_dict;
+/// crc32 wrapper;
 pub mod crc32;
+/// murmur3 wrapper;
+pub mod murmur3;
 
 #[derive(Debug, Fail)]
 pub enum LZJDError {
@@ -96,6 +99,12 @@ impl From<bincode::Error> for LZJDError {
     }
 }
 
+impl From<std::io::Error> for LZJDError {
+    fn from(err: std::io::Error) -> Self {
+        LZJDError::Io { err }
+    }
+}
+
 impl<'a> From<&'a str> for LZJDError {
     fn from(msg: &'a str) -> Self {
         LZJDError::Msg {
@@ -110,7 +119,7 @@ pub type Result<T> = std::result::Result<T, LZJDError>;
 mod tests {
     use crate::crc32::CRC32BuildHasher;
     use crate::*;
-    use std::f32::EPSILON;
+    use std::f64::EPSILON;
 
     #[test]
     fn test_optimized_dist() {
@@ -121,16 +130,16 @@ mod tests {
         let c = b"totally_different";
         let d = b"THIS IS A DIFFERENT TEST SEQUENCE";
 
-        let k = 1024;
+        let dict_a = LZDict::from_bytes_stream_lz78(a.iter().cloned(), &build_hasher);
+        let dict_b = LZDict::from_bytes_stream_lz78(b.iter().cloned(), &build_hasher);
+        let dict_c = LZDict::from_bytes_stream_lz78(c.iter().cloned(), &build_hasher);
+        let dict_d = LZDict::from_bytes_stream_lz78(d.iter().cloned(), &build_hasher);
 
-        let dict_a = LZDict::from_bytes_stream(a.iter().cloned(), &build_hasher, k);
-        let dict_b = LZDict::from_bytes_stream(b.iter().cloned(), &build_hasher, k);
-        let dict_c = LZDict::from_bytes_stream(c.iter().cloned(), &build_hasher, k);
-        let dict_d = LZDict::from_bytes_stream(d.iter().cloned(), &build_hasher, k);
-
+        let dist = dict_a.dist(&dict_b);
         assert!(
-            dict_a.dist(&dict_b).abs() < EPSILON, // dist(a, b) == 0
-            "Distance of equal sequences (a and b) should equal 0"
+            dist.abs() < EPSILON, // dist(a, b) == 0
+            "Distance of equal sequences (a and b) should equal 0, was {}",
+            dist
         );
         let dist = dict_a.dist(&dict_c);
         assert!(
@@ -138,9 +147,11 @@ mod tests {
             "Distance of totally different sequences (a and c) should equal 1, was {}",
             dist
         );
+        let dist = dict_a.dist(&dict_d);
         assert!(
-            (0.409_090_94 - dict_a.dist(&dict_d)).abs() < EPSILON, // dist(a, d) == 0.409_090_94
-            "Distance of a and d should equal 0.40909094"
+            (0.409_090_909_090_909_06 - dist).abs() < EPSILON, // dist(a, d) == 0.409_090_909_090_909_06
+            "Distance of a and d should equal 0.40909090909090906, was {}",
+            dist
         );
         assert!(
             (dict_a.dist(&dict_d) - dict_d.dist(&dict_a)).abs() < EPSILON, // dist(a,d) == dist(d,a)

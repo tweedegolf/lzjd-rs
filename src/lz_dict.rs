@@ -2,17 +2,18 @@ use crate::Result;
 use core::hash::BuildHasher;
 use core::hash::Hasher;
 use core::ops::Deref;
+use std::collections::HashSet;
 
 /// A sorted list of the k smallest LZSet hashes
 #[derive(Debug)]
 pub struct LZDict {
     // Once const generics are stablilized, entries can be an array
     // and the crate can become no_std
-    entries: Vec<u64>,
+    entries: Vec<i32>,
 }
 
 impl LZDict {
-    /// Converts a base64 string into a Vec<u64> and wraps a LZDict around it.
+    /// Converts a base64 string into a Vec<i64> and wraps a LZDict around it.
     pub fn from_base64_string(b64: &str) -> Result<Self> {
         let bytes = base64::decode(b64)?;
         let mut entries = vec![];
@@ -31,40 +32,80 @@ impl LZDict {
 
         Ok(Self { entries })
     }
-
     /// Creates a LZ dictionary containing the smallest k hashes
     /// of LZ sequences obtained from seq_iter.
-    pub fn from_bytes_stream<I, H>(seq_iter: I, build_hasher: &H, k: usize) -> Self
-    where
-        I: Iterator<Item = u8>,
-        H: BuildHasher,
+    /// Based on LZ78 as described in https://en.wikipedia.org/wiki/LZ77_and_LZ78#LZ78
+    pub fn from_bytes_stream_lz78<I, H>(seq_iter: I, build_hasher: &H) -> Self
+        where
+            I: Iterator<Item=u8>,
+            H: BuildHasher,
     {
-        let mut entries = Vec::with_capacity(k);
+        let mut dict: Vec<(usize, u8)> = Vec::new();
+        let mut last_matching_index: usize = 0;
+        dict.push((0, 0));
+
+        for item in seq_iter {
+            if let Some(index) = dict.iter().position(
+                |(lmi, i)| lmi == &last_matching_index && i == &item
+            ) {
+                last_matching_index = index;
+            } else {
+                dict.push((last_matching_index, item));
+                last_matching_index = 0;
+            }
+        }
+
+        let mut hashes: Vec<i32> = Vec::new();
         let mut hasher = build_hasher.build_hasher();
 
-        seq_iter.for_each(|byte| {
-            // Update hash
-            hasher.write_u8(byte);
-            let hash = hasher.finish();
+        for i in 1..dict.len() {
+            Self::hash_entry(i, &dict, &mut hasher);
+            let hash = hasher.finish() as i32;
+            hasher = build_hasher.build_hasher();
 
-            if let Err(insert_at) = entries.binary_search(&hash) {
-                // If entries does not yet contain current hash
-                if entries.len() < k {
-                    // There's room for another hash without reallocating
-                    entries.insert(insert_at, hash); // Insert current hash
-                    hasher = build_hasher.build_hasher(); // Reset hasher
-                } else if hash < *entries.last().unwrap() {
-                    // Current hash is smaller than largest in entries
-                    entries.pop(); // Remove greatest hash
+            if let Err(insert_at) = hashes.binary_search(&hash) {
+                if hashes.len() < 1024 {
+                    hashes.insert(insert_at, hash); // Insert current hash
+                } else if hash < *hashes.last().unwrap() {
+                    hashes.pop(); // Remove greatest hash
 
-                    entries.insert(insert_at, hash); // Insert current hash
-                    hasher = build_hasher.build_hasher(); // Reset hasher
+                    hashes.insert(insert_at, hash); // Insert current hash
                 }
             }
-            // else it's already in there and we can go on
-        });
+        }
 
-        LZDict { entries }
+        LZDict { entries: hashes }
+    }
+
+    fn hash_entry<H: Hasher>(index: usize, dict: &Vec<(usize, u8)>, hasher: &mut H) {
+        if index == 0 {
+            return;
+        }
+        let entry = dict[index];
+        Self::hash_entry(entry.0, dict, hasher);
+        hasher.write_u8(entry.1);
+    }
+
+    pub fn from_bytes_stream<I, H>(seq_iter: I, build_hasher: &H) -> Self
+        where
+            I: Iterator<Item=u8>,
+            H: BuildHasher,
+    {
+        let mut dict = HashSet::new();
+        let mut hasher = build_hasher.build_hasher();
+
+        for byte in seq_iter {
+            hasher.write_u8(byte);
+            let hash = hasher.finish() as i32;
+            if dict.insert(hash) {
+                hasher = build_hasher.build_hasher();
+            }
+        }
+
+        let mut dict: Vec<_> = dict.iter().cloned().collect();
+        dict.sort();
+
+        LZDict { entries: dict.iter().cloned().take(1000).collect() }
     }
 
     fn intersection_len(&self, other: &Self) -> usize {
@@ -89,12 +130,12 @@ impl LZDict {
 
     /// Calculates the jaccard similarity of the entries two dictionaries
     /// which is defined as the length of the intersection over the length of the union.
-    pub fn jaccard_similarity(&self, other: &Self) -> f32 {
+    pub fn jaccard_similarity(&self, other: &Self) -> f64 {
         let intersection_len = self.intersection_len(other);
 
         let union_len = self.len() + other.len() - intersection_len;
 
-        intersection_len as f32 / union_len as f32
+        intersection_len as f64 / union_len as f64
     }
 
     /// Encodes the contents of the dictionary to base64 and returns it as a string.
@@ -108,33 +149,33 @@ impl LZDict {
     }
 
     /// Calculates the LZ-distance of two LZ Dictionaries
-    pub fn dist(&self, other: &LZDict) -> f32 {
+    pub fn dist(&self, other: &LZDict) -> f64 {
         1.0 - self.similarity(other)
     }
 
     /// Calculates the LZ-similarity of two LZ Dictionaries
-    pub fn similarity(&self, other: &LZDict) -> f32 {
+    pub fn similarity(&self, other: &LZDict) -> f64 {
         self.jaccard_similarity(other)
     }
 }
 
 impl Deref for LZDict {
-    type Target = Vec<u64>;
+    type Target = Vec<i32>;
 
     fn deref(&self) -> &Self::Target {
         &self.entries
     }
 }
 
-impl From<Vec<u64>> for LZDict {
-    fn from(mut entries: Vec<u64>) -> Self {
+impl From<Vec<i32>> for LZDict {
+    fn from(mut entries: Vec<i32>) -> Self {
         entries.sort();
         entries.truncate(1024);
         Self { entries }
     }
 }
 
-impl From<LZDict> for Vec<u64> {
+impl From<LZDict> for Vec<i32> {
     fn from(item: LZDict) -> Self {
         item.entries
     }
@@ -144,7 +185,7 @@ impl From<LZDict> for Vec<u64> {
 mod tests {
     use crate::crc32::CRC32BuildHasher;
     use crate::lz_dict::LZDict;
-    use std::f32::EPSILON;
+    use std::f64::EPSILON;
     use std::iter::*;
 
     fn is_sorted_and_unique<T: PartialOrd>(list: &[T]) -> bool {
@@ -163,10 +204,10 @@ mod tests {
 
     #[test]
     fn test_from_bytes_iter() {
-        let sequence = b"TESTSEQUENCETESTTESTTTTTEESSTT".to_vec();
+        let sequence = b"TESTSEQUENCETESTTESTTTTTEESSTT";
         let k = 10;
         let build_hasher = CRC32BuildHasher;
-        let lz_dict = LZDict::from_bytes_stream(sequence.iter().cloned(), &build_hasher, k);
+        let lz_dict = LZDict::from_bytes_stream(sequence.iter().cloned(), &build_hasher);
 
         assert!(
             is_sorted_and_unique(&lz_dict),
@@ -178,12 +219,12 @@ mod tests {
 
     #[test]
     fn test_jaccard_similarity() {
-        const A_ENTRIES: [u64; 4] = [0, 1, 2, 3];
-        const B_ENTRIES: [u64; 3] = [0, 1, 2];
-        const C_ENTRIES: [u64; 4] = [1, 2, 3, 4];
-        const D_ENTRIES: [u64; 0] = [];
-        const E_ENTRIES: [u64; 4] = [4, 5, 6, 7];
-        const F_ENTRIES: [u64; 5] = [0, 1, 2, 3, 5];
+        const A_ENTRIES: [i32; 4] = [0, 1, 2, 3];
+        const B_ENTRIES: [i32; 3] = [0, 1, 2];
+        const C_ENTRIES: [i32; 4] = [1, 2, 3, 4];
+        const D_ENTRIES: [i32; 0] = [];
+        const E_ENTRIES: [i32; 4] = [4, 5, 6, 7];
+        const F_ENTRIES: [i32; 5] = [0, 1, 2, 3, 5];
 
         const UNION_A_A_LEN: usize = 4;
         const UNION_A_B_LEN: usize = 4;
@@ -219,27 +260,27 @@ mod tests {
         };
 
         assert!(
-            (a.jaccard_similarity(&a) - INTERSECTION_A_A_LEN as f32 / UNION_A_A_LEN as f32).abs()
+            (a.jaccard_similarity(&a) - INTERSECTION_A_A_LEN as f64 / UNION_A_A_LEN as f64).abs()
                 < EPSILON
         );
         assert!(
-            (a.jaccard_similarity(&b) - INTERSECTION_A_B_LEN as f32 / UNION_A_B_LEN as f32).abs()
+            (a.jaccard_similarity(&b) - INTERSECTION_A_B_LEN as f64 / UNION_A_B_LEN as f64).abs()
                 < EPSILON
         );
         assert!(
-            (a.jaccard_similarity(&c) - INTERSECTION_A_C_LEN as f32 / UNION_A_C_LEN as f32).abs()
+            (a.jaccard_similarity(&c) - INTERSECTION_A_C_LEN as f64 / UNION_A_C_LEN as f64).abs()
                 < EPSILON
         );
         assert!(
-            (a.jaccard_similarity(&d) - INTERSECTION_A_D_LEN as f32 / UNION_A_D_LEN as f32).abs()
+            (a.jaccard_similarity(&d) - INTERSECTION_A_D_LEN as f64 / UNION_A_D_LEN as f64).abs()
                 < EPSILON
         );
         assert!(
-            (a.jaccard_similarity(&e) - INTERSECTION_A_E_LEN as f32 / UNION_A_E_LEN as f32).abs()
+            (a.jaccard_similarity(&e) - INTERSECTION_A_E_LEN as f64 / UNION_A_E_LEN as f64).abs()
                 < EPSILON
         );
         assert!(
-            (a.jaccard_similarity(&f) - INTERSECTION_A_F_LEN as f32 / UNION_A_F_LEN as f32).abs()
+            (a.jaccard_similarity(&f) - INTERSECTION_A_F_LEN as f64 / UNION_A_F_LEN as f64).abs()
                 < EPSILON
         );
     }

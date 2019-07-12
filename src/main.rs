@@ -6,8 +6,10 @@ extern crate lzjd;
 extern crate failure_derive;
 
 mod crc32;
+mod murmur3;
 
-use crc32::CRC32BuildHasher;
+use murmur3::Murmur3BuildHasher;
+
 use lzjd::{LZDict, LZJDError};
 
 use std::fs::File;
@@ -22,8 +24,6 @@ use clap::{App, Arg};
 use rayon::prelude::*;
 use walkdir::WalkDir;
 
-const K: usize = 1024;
-
 #[derive(Debug, Fail)]
 enum Error {
     #[fail(display = "IO error: {}", err)]
@@ -35,6 +35,11 @@ enum Error {
     Walkdir {
         #[cause]
         err: walkdir::Error,
+    },
+    #[fail(display = "ThreadPoolBuild error: {}", err)]
+    ThreadPoolBuild {
+        #[cause]
+        err: rayon::ThreadPoolBuildError,
     },
     #[fail(display = "{}", err)]
     LZJD {
@@ -55,6 +60,12 @@ impl From<walkdir::Error> for Error {
     }
 }
 
+impl From<rayon::ThreadPoolBuildError> for Error {
+    fn from(err: rayon::ThreadPoolBuildError) -> Self {
+        Error::ThreadPoolBuild { err }
+    }
+}
+
 impl From<LZJDError> for Error {
     fn from(err: LZJDError) -> Self {
         Error::LZJD { err }
@@ -64,10 +75,12 @@ impl From<LZJDError> for Error {
 type Result<T> = std::result::Result<T, Error>;
 
 fn main() {
+    let cpus = &num_cpus::get().to_string();
+
     let matches = App::new("LZJD")
         .version("1.0")
         .author("Henk Dieter Oordt <henkdieter@tweedegolf.com>")
-        .about("Calculates Lempel-Zev-Jaccard distance of input binaries. Based on jLZJD (https://github.com/EdwardRaff/jLZJD).")
+        .about("Calculates Lempel-Ziv Jaccard distance of input binaries. Based on jLZJD (https://github.com/EdwardRaff/jLZJD).")
         .arg(
             Arg::with_name("deep")
                 .short("r")
@@ -97,6 +110,15 @@ fn main() {
                 .takes_value(true)
                 .default_value("1")
                 .value_name("THRESHOLD"),
+        )
+        .arg(
+            Arg::with_name("threads")
+                .short("p")
+                .long("--threads")
+                .help("restrict compute threads to N threads")
+                .takes_value(true)
+                .default_value(cpus)
+                .value_name("THREADS")
         )
         .arg(
             Arg::with_name("output")
@@ -131,6 +153,12 @@ fn run(matches: clap::ArgMatches) -> Result<()> {
         .unwrap_or(Some(1))
         .unwrap();
 
+    let num_threads = matches
+        .value_of("threads")
+        .map(|p| p.parse::<usize>().ok())
+        .unwrap_or(Some(4))
+        .unwrap();
+
     let input_paths: Vec<PathBuf> = if deep {
         matches.args["input"]
             .vals
@@ -159,6 +187,8 @@ fn run(matches: clap::ArgMatches) -> Result<()> {
     };
 
     let output_path = matches.value_of("output").map(PathBuf::from);
+
+    rayon::ThreadPoolBuilder::new().num_threads(num_threads).build_global()?;
 
     let mut writer = create_out_writer(&output_path)?;
 
@@ -260,7 +290,7 @@ fn gen_comp(paths: &[PathBuf], threshold: u32, writer: &mut dyn Write) -> Result
 
 /// Digest and print out the hashes for the given list of files
 fn hash_files(paths: &[PathBuf], writer: Option<&mut dyn Write>) -> Result<Vec<(LZDict, String)>> {
-    let build_hasher = CRC32BuildHasher;
+    let build_hasher = Murmur3BuildHasher;
 
     let dicts: Result<Vec<(LZDict, String)>> = paths
         .par_iter()
@@ -276,7 +306,7 @@ fn hash_files(paths: &[PathBuf], writer: Option<&mut dyn Write>) -> Result<Vec<(
                     .map(std::result::Result::unwrap);
 
                 v.push((
-                    LZDict::from_bytes_stream(bytes, &build_hasher, K),
+                    LZDict::from_bytes_stream(bytes, &build_hasher),
                     path_name.to_owned(),
                 ));
 

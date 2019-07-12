@@ -6,4 +6,5 @@ massif.out.*
 callgrind.out.*
 in
 out
-perf.data*
+perf
+perf*

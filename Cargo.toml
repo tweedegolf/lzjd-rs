@@ -1,6 +1,6 @@
 [package]
 name = "lzjd"
-version = "0.1.2"
+version = "0.1.3"
 authors = ["Henk Dieter <henkdieter@tweedegolf.com>"]
 edition = "2018"
 exclude = ["in/*"]
@@ -9,13 +9,14 @@ readme = "README.md"
 keywords = ["lzjd", "edit", "distance", "Lempel", "Ziv"]
 categories = ["algorithms","compression","cryptography","filesystem","science"]
 license = "GPL-3.0"
-repository = "https://github.com/hdoordt/lzjd-rs"
+repository = "https://github.com/tweedegolf/lzjd-rs"
 
 [dependencies]
 clap = "2.32.0"
 base64 = "0.10.1"
 failure = "0.1.5"
 failure_derive = "0.1.5"
+fasthash= "0.4.0"
 bincode = "1.1.2"
 crc = "1.8.1"
 walkdir = "2.2.7"
@@ -24,5 +25,8 @@ rayon = "1.0.3"
 
 [dev-dependencies]
 rand = "0.6.5"
+criterion = "0.2.10"
 
-
+[[bench]]
+name = "lzjd"
+harness = false
