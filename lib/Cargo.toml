@@ -1,6 +1,6 @@
 [package]
 name = "lzjd"
-version = "0.2.0"
+version = "0.2.0"  # !!! needs a major bump
 authors = ["Henk Dieter <henkdieter@tweedegolf.com>"]
 edition = "2018"
 exclude = ["in/*", "out/*"]

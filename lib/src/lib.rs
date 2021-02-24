@@ -75,12 +75,6 @@ pub mod murmur3;
 
 #[derive(Debug, Fail)]
 pub enum LZJDError {
-    /// This option is no longer used, but since it's public,
-    /// we can't remove it without deprecating it first
-    #[deprecated]
-    #[fail(display = "IO Error")]
-    IO {},
-
     #[fail(display = "Decode error: {}", err)]
     Base64 {
         #[cause]
