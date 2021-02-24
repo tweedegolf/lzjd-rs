@@ -39,4 +39,3 @@ impl BuildHasher for CRC32BuildHasher {
         CRC32Hasher::new()
     }
 }
-
