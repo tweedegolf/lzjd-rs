@@ -1,5 +1,5 @@
 [package]
-name = "lzjd-bin"
+name = "lzjd"
 version = "0.2.0"
 authors = ["Henk Dieter <henkdieter@tweedegolf.com>"]
 edition = "2018"
@@ -11,20 +11,17 @@ categories = ["algorithms","compression","cryptography","filesystem","science"]
 license = "GPL-3.0"
 repository = "https://github.com/tweedegolf/lzjd-rs"
 
-[workspace]
-members = [".", "lib"]
-
 [dependencies]
-lzjd = { path = "./lib" }
-base64 = "0.10.1"
-bincode = "1.1.2"
-clap = "2.32.0"
-failure = "0.1.5"
-failure_derive = "0.1.5"
-num_cpus = "1.10.0"
-rayon = "1.0.3"
-walkdir = "2.2.7"
+hashbrown = "0.9.1"
+crc = { version = "1.8.1", default-features = false }
+base64 = { version = "0.10.1", default-features = false }
 
-[[bench]]
-name = "lzjd"
-harness = false
+# fasthash is mostly written in C with a FFI
+# a pure Rust alternative is https://github.com/stusmall/murmur3, which
+# still needs std by default, but can be easily patched
+fasthash = "0.4.0"
+
+bincode = "1.1.2" # no_std is a WIP, keep an eye on https://github.com/bincode-org/bincode/pull/339
+
+failure = "0.1.5" # deprecated; switch dependency
+failure_derive = "0.1.5"

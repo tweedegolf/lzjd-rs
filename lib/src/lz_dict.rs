@@ -1,8 +1,10 @@
 use crate::Result;
-use core::hash::BuildHasher;
-use core::hash::Hasher;
+use core::hash::{Hasher, BuildHasher};
 use core::ops::Deref;
-use std::collections::HashSet;
+use alloc::vec;
+use alloc::vec::Vec;
+use alloc::string::String;
+use hashbrown::HashSet;
 
 /// A sorted list of the k smallest LZSet hashes
 #[derive(Debug)]
@@ -185,8 +187,7 @@ impl From<LZDict> for Vec<i32> {
 mod tests {
     use crate::crc32::CRC32BuildHasher;
     use crate::lz_dict::LZDict;
-    use std::f64::EPSILON;
-    use std::iter::*;
+    use core::f64::EPSILON;
 
     fn is_sorted_and_unique<T: PartialOrd>(list: &[T]) -> bool {
         if list.len() <= 1 {
