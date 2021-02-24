@@ -188,7 +188,9 @@ fn run(matches: clap::ArgMatches) -> Result<()> {
 
     let output_path = matches.value_of("output").map(PathBuf::from);
 
-    rayon::ThreadPoolBuilder::new().num_threads(num_threads).build_global()?;
+    rayon::ThreadPoolBuilder::new()
+        .num_threads(num_threads)
+        .build_global()?;
 
     let mut writer = create_out_writer(&output_path)?;
 

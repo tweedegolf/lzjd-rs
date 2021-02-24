@@ -36,18 +36,19 @@ impl LZDict {
     /// of LZ sequences obtained from seq_iter.
     /// Based on LZ78 as described in https://en.wikipedia.org/wiki/LZ77_and_LZ78#LZ78
     pub fn from_bytes_stream_lz78<I, H>(seq_iter: I, build_hasher: &H) -> Self
-        where
-            I: Iterator<Item=u8>,
-            H: BuildHasher,
+    where
+        I: Iterator<Item = u8>,
+        H: BuildHasher,
     {
         let mut dict: Vec<(usize, u8)> = Vec::new();
         let mut last_matching_index: usize = 0;
         dict.push((0, 0));
 
         for item in seq_iter {
-            if let Some(index) = dict.iter().position(
-                |(lmi, i)| lmi == &last_matching_index && i == &item
-            ) {
+            if let Some(index) = dict
+                .iter()
+                .position(|(lmi, i)| lmi == &last_matching_index && i == &item)
+            {
                 last_matching_index = index;
             } else {
                 dict.push((last_matching_index, item));
@@ -87,9 +88,9 @@ impl LZDict {
     }
 
     pub fn from_bytes_stream<I, H>(seq_iter: I, build_hasher: &H) -> Self
-        where
-            I: Iterator<Item=u8>,
-            H: BuildHasher,
+    where
+        I: Iterator<Item = u8>,
+        H: BuildHasher,
     {
         let mut dict = HashSet::new();
         let mut hasher = build_hasher.build_hasher();
@@ -105,7 +106,9 @@ impl LZDict {
         let mut dict: Vec<_> = dict.iter().cloned().collect();
         dict.sort();
 
-        LZDict { entries: dict.iter().cloned().take(1000).collect() }
+        LZDict {
+            entries: dict.iter().cloned().take(1000).collect(),
+        }
     }
 
     fn intersection_len(&self, other: &Self) -> usize {
