@@ -25,3 +25,11 @@ bincode = "1.1.2" # no_std is a WIP, keep an eye on https://github.com/bincode-o
 
 failure = "0.1.5" # deprecated; switch dependency
 failure_derive = "0.1.5"
+
+[dev-dependencies]
+criterion = "0.3.4"
+rand = "0.8.3"
+
+[[bench]]
+name = "lzjd"
+harness = false
