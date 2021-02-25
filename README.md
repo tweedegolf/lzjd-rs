@@ -5,13 +5,14 @@
 Rust implementation of Lempel-Ziv Jaccard Distance (LZJD) algorithm based on [jLZJD](https://github.com/EdwardRaff/jLZJD)
 
 Main differences:
+
 - Rust instead of Java
 - Can use any hasher (executable uses CRC32) instead of just Murmur3
 - Does not allocate memory for every unique hash, instead keeps k=1024 smallest
-- Based on Vec<u64> instead of IntSetNoRemove, which is more like HashMap
+- Based on `Vec<u64>` instead of IntSetNoRemove, which is more like HashMap
 - Hash files are considerably smaller if small sequences have been digested
 
-```
+```man
 USAGE:
     lzjd [FLAGS] [OPTIONS] <INPUT>...
 
@@ -29,7 +30,6 @@ OPTIONS:
 ARGS:
     <INPUT>...    Sets the input file to use
 ```
-
 
 See also:
 

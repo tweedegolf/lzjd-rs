@@ -1,9 +1,7 @@
 //! Defines a wrapper around crc::crc32::Digest, implementing std::hash::Hasher
 //! as well as a std::hash::BuildHasher which builds the hasher.
 use crc::crc32::{self, Hasher32};
-
-use std::hash::BuildHasher;
-use std::hash::Hasher;
+use core::hash::{Hasher, BuildHasher};
 
 /// Wrapper around crc::crc32::Digest which implements std::hash::Hasher
 pub struct CRC32Hasher {
@@ -39,4 +37,3 @@ impl BuildHasher for CRC32BuildHasher {
         CRC32Hasher::new()
     }
 }
-

@@ -5,12 +5,9 @@ extern crate lzjd;
 #[macro_use]
 extern crate failure_derive;
 
-mod crc32;
-mod murmur3;
+use lzjd::{murmur3, LZDict, LZJDError};
 
 use murmur3::Murmur3BuildHasher;
-
-use lzjd::{LZDict, LZJDError};
 
 use std::fs::File;
 use std::io::Write;

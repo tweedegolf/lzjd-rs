@@ -1,0 +1,35 @@
+[package]
+name = "lzjd"
+version = "0.2.0"  # !!! needs a major bump
+authors = ["Henk Dieter <henkdieter@tweedegolf.com>"]
+edition = "2018"
+exclude = ["in/*", "out/*"]
+description = "Rust implementation of the LZJD algorithm (https://github.com/EdwardRaff/jLZJD)"
+readme = "README.md"
+keywords = ["lzjd", "edit", "distance", "Lempel", "Ziv"]
+categories = ["algorithms","compression","cryptography","filesystem","science"]
+license = "GPL-3.0"
+repository = "https://github.com/tweedegolf/lzjd-rs"
+
+[dependencies]
+hashbrown = "0.9.1"
+crc = { version = "1.8.1", default-features = false }
+base64 = { version = "0.10.1", default-features = false }
+
+# fasthash is mostly written in C with a FFI
+# a pure Rust alternative is https://github.com/stusmall/murmur3, which
+# still needs std by default, but can be easily patched
+fasthash = "0.4.0"
+
+bincode = "1.1.2" # no_std is a WIP, keep an eye on https://github.com/bincode-org/bincode/pull/339
+
+failure = "0.1.5" # deprecated; switch dependency
+failure_derive = "0.1.5"
+
+[dev-dependencies]
+criterion = "0.3.4"
+rand = "0.8.3"
+
+[[bench]]
+name = "lzjd"
+harness = false

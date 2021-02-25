@@ -52,12 +52,19 @@
 //!
 //! assert_eq!(lzjd, 0.5714285714285714);
 //! ```
-
+#![no_std]
+extern crate alloc;
+extern crate hashbrown;
 #[macro_use]
 extern crate failure_derive;
+extern crate base64;
+extern crate bincode;
+extern crate fasthash;
+
+
+use alloc::string::{String, ToString};
 
 pub use crate::lz_dict::LZDict;
-use std::io;
 
 /// LZ dictionary implementation
 pub mod lz_dict;
@@ -68,11 +75,6 @@ pub mod murmur3;
 
 #[derive(Debug, Fail)]
 pub enum LZJDError {
-    #[fail(display = "IO error: {}", err)]
-    Io {
-        #[cause]
-        err: io::Error,
-    },
     #[fail(display = "Decode error: {}", err)]
     Base64 {
         #[cause]
@@ -99,27 +101,21 @@ impl From<bincode::Error> for LZJDError {
     }
 }
 
-impl From<std::io::Error> for LZJDError {
-    fn from(err: std::io::Error) -> Self {
-        LZJDError::Io { err }
-    }
-}
-
 impl<'a> From<&'a str> for LZJDError {
     fn from(msg: &'a str) -> Self {
         LZJDError::Msg {
-            msg: msg.to_owned(),
+            msg: msg.to_string(),
         }
     }
 }
 
-pub type Result<T> = std::result::Result<T, LZJDError>;
+pub type Result<T> = core::result::Result<T, LZJDError>;
 
 #[cfg(test)]
 mod tests {
     use crate::crc32::CRC32BuildHasher;
     use crate::*;
-    use std::f64::EPSILON;
+    use core::f64::EPSILON;
 
     #[test]
     fn test_optimized_dist() {

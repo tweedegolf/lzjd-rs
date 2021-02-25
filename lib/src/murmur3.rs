@@ -1,5 +1,5 @@
 use fasthash::FastHasher;
-use std::hash::BuildHasher;
+use core::hash::BuildHasher;
 
 pub struct Murmur3BuildHasher;
 

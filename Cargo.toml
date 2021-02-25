@@ -1,5 +1,5 @@
 [package]
-name = "lzjd"
+name = "lzjd-bin"
 version = "0.2.0"
 authors = ["Henk Dieter <henkdieter@tweedegolf.com>"]
 edition = "2018"
@@ -11,22 +11,16 @@ categories = ["algorithms","compression","cryptography","filesystem","science"]
 license = "GPL-3.0"
 repository = "https://github.com/tweedegolf/lzjd-rs"
 
+[workspace]
+members = [".", "lib"]
+
 [dependencies]
-clap = "2.32.0"
+lzjd = { path = "./lib" }
 base64 = "0.10.1"
+bincode = "1.1.2"
+clap = "2.32.0"
 failure = "0.1.5"
 failure_derive = "0.1.5"
-fasthash= "0.4.0"
-bincode = "1.1.2"
-crc = "1.8.1"
-walkdir = "2.2.7"
 num_cpus = "1.10.0"
 rayon = "1.0.3"
-
-[dev-dependencies]
-rand = "0.6.5"
-criterion = "0.2.10"
-
-[[bench]]
-name = "lzjd"
-harness = false
+walkdir = "2.2.7"
