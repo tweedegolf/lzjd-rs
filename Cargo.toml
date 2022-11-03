@@ -16,7 +16,7 @@ clap = "2.32.0"
 base64 = "0.10.1"
 failure = "0.1.5"
 failure_derive = "0.1.5"
-fasthash= "0.4.0"
+murmurhash3 = { git = "https://github.com/rjzak/murmurhash3-rs", branch = "update" }
 bincode = "1.1.2"
 crc = "1.8.1"
 walkdir = "2.2.7"

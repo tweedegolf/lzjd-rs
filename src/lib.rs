@@ -57,14 +57,13 @@
 extern crate failure_derive;
 
 pub use crate::lz_dict::LZDict;
+pub use murmurhash3::Murmur3HashState;
 use std::io;
 
-/// LZ dictionary implementation
-pub mod lz_dict;
 /// crc32 wrapper;
 pub mod crc32;
-/// murmur3 wrapper;
-pub mod murmur3;
+/// LZ dictionary implementation
+pub mod lz_dict;
 
 #[derive(Debug, Fail)]
 pub enum LZJDError {

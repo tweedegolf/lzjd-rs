@@ -6,9 +6,7 @@ extern crate lzjd;
 extern crate failure_derive;
 
 mod crc32;
-mod murmur3;
-
-use murmur3::Murmur3BuildHasher;
+use murmurhash3::Murmur3HashState;
 
 use lzjd::{LZDict, LZJDError};
 
@@ -137,7 +135,7 @@ fn main() {
         )
         .get_matches();
     if let Err(e) = run(matches) {
-        eprintln!("{}", e);
+        eprintln!("{:?}", e);
         process::exit(-1);
     }
 }
@@ -188,7 +186,9 @@ fn run(matches: clap::ArgMatches) -> Result<()> {
 
     let output_path = matches.value_of("output").map(PathBuf::from);
 
-    rayon::ThreadPoolBuilder::new().num_threads(num_threads).build_global()?;
+    rayon::ThreadPoolBuilder::new()
+        .num_threads(num_threads)
+        .build_global()?;
 
     let mut writer = create_out_writer(&output_path)?;
 
@@ -290,7 +290,7 @@ fn gen_comp(paths: &[PathBuf], threshold: u32, writer: &mut dyn Write) -> Result
 
 /// Digest and print out the hashes for the given list of files
 fn hash_files(paths: &[PathBuf], writer: Option<&mut dyn Write>) -> Result<Vec<(LZDict, String)>> {
-    let build_hasher = Murmur3BuildHasher;
+    let build_hasher = Murmur3HashState::new();
 
     let dicts: Result<Vec<(LZDict, String)>> = paths
         .par_iter()
