@@ -1,9 +1,9 @@
 #[macro_use]
 extern crate criterion;
 
-use criterion::Criterion;
-use ::lzjd::LZDict;
 use ::lzjd::crc32::CRC32BuildHasher;
+use ::lzjd::LZDict;
+use criterion::Criterion;
 use rand::prelude::*;
 
 fn generate_byte_sequence() -> Vec<u8> {
@@ -18,7 +18,6 @@ fn generate_byte_sequence() -> Vec<u8> {
 }
 
 fn bench_dist(c: &mut Criterion) {
-   
     c.bench_function("LZDict::from_bytes_stream", |b| {
         let build_hasher = CRC32BuildHasher;
 

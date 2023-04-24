@@ -251,26 +251,20 @@ fn compare(
     let similarities: Vec<(String, String, u32)> = dicts_a
         .par_iter()
         .enumerate()
-        .fold(
-            Vec::new,
-            |mut v, (i, (dict_a, name_a))| {
-                let j_start = if same { i + 1 } else { 0 };
-                dicts_b.iter().skip(j_start).for_each(|(dict_b, name_b)| {
-                    let similarity = (dict_a.similarity(dict_b) * 100.).round() as u32;
-                    if similarity >= threshold {
-                        v.push((name_a.to_owned(), name_b.to_owned(), similarity));
-                    }
-                });
-                v
-            },
-        )
-        .reduce(
-            Vec::new,
-            |mut v, mut r| {
-                v.append(&mut r);
-                v
-            },
-        );
+        .fold(Vec::new, |mut v, (i, (dict_a, name_a))| {
+            let j_start = if same { i + 1 } else { 0 };
+            dicts_b.iter().skip(j_start).for_each(|(dict_b, name_b)| {
+                let similarity = (dict_a.similarity(dict_b) * 100.).round() as u32;
+                if similarity >= threshold {
+                    v.push((name_a.to_owned(), name_b.to_owned(), similarity));
+                }
+            });
+            v
+        })
+        .reduce(Vec::new, |mut v, mut r| {
+            v.append(&mut r);
+            v
+        });
 
     similarities
         .iter()
@@ -294,32 +288,26 @@ fn hash_files(paths: &[PathBuf], writer: Option<&mut dyn Write>) -> Result<Vec<(
 
     let dicts: Result<Vec<(LZDict, String)>> = paths
         .par_iter()
-        .try_fold(
-            Vec::new,
-            |mut v, r| {
-                let file = File::open(r)?;
+        .try_fold(Vec::new, |mut v, r| {
+            let file = File::open(r)?;
 
-                let path_name = r.to_str().unwrap();
+            let path_name = r.to_str().unwrap();
 
-                let bytes = BufReader::new(file)
-                    .bytes()
-                    .map(std::result::Result::unwrap);
+            let bytes = BufReader::new(file)
+                .bytes()
+                .map(std::result::Result::unwrap);
 
-                v.push((
-                    LZDict::from_bytes_stream(bytes, &build_hasher),
-                    path_name.to_owned(),
-                ));
+            v.push((
+                LZDict::from_bytes_stream(bytes, &build_hasher),
+                path_name.to_owned(),
+            ));
 
-                Ok(v)
-            },
-        )
-        .try_reduce(
-            Vec::new,
-            |mut v, mut results| {
-                v.append(&mut results);
-                Ok(v)
-            },
-        );
+            Ok(v)
+        })
+        .try_reduce(Vec::new, |mut v, mut results| {
+            v.append(&mut results);
+            Ok(v)
+        });
     let dicts = dicts?;
     if let Some(writer) = writer {
         dicts.iter().try_for_each(|d| {
