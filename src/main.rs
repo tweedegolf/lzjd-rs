@@ -40,7 +40,7 @@ enum Error {
         err: rayon::ThreadPoolBuildError,
     },
     #[fail(display = "{}", err)]
-    LZJD {
+    Lzjd {
         #[cause]
         err: LZJDError,
     },
@@ -66,7 +66,7 @@ impl From<rayon::ThreadPoolBuildError> for Error {
 
 impl From<LZJDError> for Error {
     fn from(err: LZJDError) -> Self {
-        Error::LZJD { err }
+        Error::Lzjd { err }
     }
 }
 
@@ -247,12 +247,12 @@ fn compare(
     threshold: u32,
     writer: &mut dyn Write,
 ) -> Result<()> {
-    let same = dicts_a as *const _ == dicts_b as *const _;
+    let same = std::ptr::eq(dicts_a, dicts_b);
     let similarities: Vec<(String, String, u32)> = dicts_a
         .par_iter()
         .enumerate()
         .fold(
-            || vec![],
+            Vec::new,
             |mut v, (i, (dict_a, name_a))| {
                 let j_start = if same { i + 1 } else { 0 };
                 dicts_b.iter().skip(j_start).for_each(|(dict_b, name_b)| {
@@ -265,7 +265,7 @@ fn compare(
             },
         )
         .reduce(
-            || vec![],
+            Vec::new,
             |mut v, mut r| {
                 v.append(&mut r);
                 v
@@ -295,7 +295,7 @@ fn hash_files(paths: &[PathBuf], writer: Option<&mut dyn Write>) -> Result<Vec<(
     let dicts: Result<Vec<(LZDict, String)>> = paths
         .par_iter()
         .try_fold(
-            || vec![],
+            Vec::new,
             |mut v, r| {
                 let file = File::open(r)?;
 
@@ -314,7 +314,7 @@ fn hash_files(paths: &[PathBuf], writer: Option<&mut dyn Write>) -> Result<Vec<(
             },
         )
         .try_reduce(
-            || vec![],
+            Vec::new,
             |mut v, mut results| {
                 v.append(&mut results);
                 Ok(v)

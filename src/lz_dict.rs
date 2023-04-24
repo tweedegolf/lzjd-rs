@@ -142,8 +142,7 @@ impl LZDict {
     pub fn to_string(&self) -> String {
         let bytes: Vec<u8> = self
             .iter()
-            .map(|hash| bincode::serialize(&hash).unwrap())
-            .flatten()
+            .flat_map(|hash| bincode::serialize(&hash).unwrap())
             .collect();
         base64::encode(&bytes)
     }
