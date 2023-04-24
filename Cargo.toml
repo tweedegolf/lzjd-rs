@@ -16,7 +16,7 @@ clap = "2.32.0"
 base64 = "0.10.1"
 failure = "0.1.5"
 failure_derive = "0.1.5"
-murmurhash3 = { git = "https://github.com/rjzak/murmurhash3-rs", branch = "update" }
+murmurhash3 = { git = "https://github.com/malwaredb/murmurhash3-rs", branch = "update" }
 bincode = "1.1.2"
 crc = "1.8.1"
 walkdir = "2.2.7"
@@ -24,8 +24,8 @@ num_cpus = "1.10.0"
 rayon = "1.0.3"
 
 [dev-dependencies]
-rand = "0.6.5"
-criterion = "0.2.10"
+rand = "0.8"
+criterion = "0.2"
 
 [[bench]]
 name = "lzjd"
