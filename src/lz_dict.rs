@@ -3,6 +3,7 @@ use core::hash::BuildHasher;
 use core::hash::Hasher;
 use core::ops::Deref;
 use std::collections::HashSet;
+use std::fmt::{Display, Formatter};
 
 /// A sorted list of the k smallest LZSet hashes
 #[derive(Debug)]
@@ -141,15 +142,6 @@ impl LZDict {
         intersection_len as f64 / union_len as f64
     }
 
-    /// Encodes the contents of the dictionary to base64 and returns it as a string.
-    pub fn to_string(&self) -> String {
-        let bytes: Vec<u8> = self
-            .iter()
-            .flat_map(|hash| bincode::serialize(&hash).unwrap())
-            .collect();
-        base64::encode(&bytes)
-    }
-
     /// Calculates the LZ-distance of two LZ Dictionaries
     pub fn dist(&self, other: &LZDict) -> f64 {
         1.0 - self.similarity(other)
@@ -180,6 +172,17 @@ impl From<Vec<i32>> for LZDict {
 impl From<LZDict> for Vec<i32> {
     fn from(item: LZDict) -> Self {
         item.entries
+    }
+}
+
+impl Display for LZDict {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let bytes: Vec<u8> = self
+            .iter()
+            .flat_map(|hash| bincode::serialize(&hash).unwrap())
+            .collect();
+        let encoded = base64::encode(bytes);
+        write!(f, "{encoded}")
     }
 }
 

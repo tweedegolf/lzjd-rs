@@ -81,28 +81,28 @@ fn main() {
         .about("Calculates Lempel-Ziv Jaccard distance of input binaries. Based on jLZJD (https://github.com/EdwardRaff/jLZJD).")
         .arg(
             Arg::with_name("deep")
-                .short("r")
+                .short('r')
                 .long("deep")
                 .help("generate SDBFs from directories and files")
                 .takes_value(false),
         )
         .arg(
             Arg::with_name("compare")
-                .short("c")
+                .short('c')
                 .long("compare")
                 .help("compare SDBFs in file, or two SDBF files")
                 .takes_value(false),
         )
         .arg(
             Arg::with_name("gen-compare")
-                .short("g")
+                .short('g')
                 .long("gen-compare")
                 .help("compare all pairs in source data")
                 .takes_value(false),
         )
         .arg(
             Arg::with_name("threshold")
-                .short("t")
+                .short('t')
                 .long("threshold")
                 .help("only show results >= threshold")
                 .takes_value(true)
@@ -111,7 +111,7 @@ fn main() {
         )
         .arg(
             Arg::with_name("threads")
-                .short("p")
+                .short('p')
                 .long("--threads")
                 .help("restrict compute threads to N threads")
                 .takes_value(true)
@@ -120,7 +120,7 @@ fn main() {
         )
         .arg(
             Arg::with_name("output")
-                .short("o")
+                .short('o')
                 .long("output")
                 .help("send output to files")
                 .takes_value(true)
@@ -158,9 +158,9 @@ fn run(matches: clap::ArgMatches) -> Result<()> {
         .unwrap();
 
     let input_paths: Vec<PathBuf> = if deep {
-        matches.args["input"]
-            .vals
-            .iter()
+        matches
+            .get_raw("input")
+            .expect("input is required")
             .map(PathBuf::from)
             .flat_map(WalkDir::new)
             .try_fold(
@@ -177,9 +177,9 @@ fn run(matches: clap::ArgMatches) -> Result<()> {
                 },
             )?
     } else {
-        matches.args["input"]
-            .vals
-            .iter()
+        matches
+            .get_raw("input")
+            .expect("input is required")
             .map(PathBuf::from)
             .collect()
     };
@@ -310,9 +310,9 @@ fn hash_files(paths: &[PathBuf], writer: Option<&mut dyn Write>) -> Result<Vec<(
         });
     let dicts = dicts?;
     if let Some(writer) = writer {
-        dicts.iter().try_for_each(|d| {
-            writer.write_fmt(format_args!("lzjd:{}:{}\n", d.1, d.0.to_string()))
-        })?;
+        dicts
+            .iter()
+            .try_for_each(|d| writer.write_fmt(format_args!("lzjd:{}:{}\n", d.1, d.0)))?;
     }
     Ok(dicts)
 }

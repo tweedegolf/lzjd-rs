@@ -12,8 +12,8 @@ license = "GPL-3.0"
 repository = "https://github.com/tweedegolf/lzjd-rs"
 
 [dependencies]
-clap = "2.34.0"
-base64 = "0.10.1"
+clap = "3.2"
+base64 = "0.13.1"
 failure = "0.1.8"
 failure_derive = "0.1.5"
 murmurhash3 = { git = "https://github.com/malwaredb/murmurhash3-rs", branch = "update" }
