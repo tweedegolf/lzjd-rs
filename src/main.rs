@@ -2,8 +2,6 @@ extern crate base64;
 extern crate bincode;
 extern crate clap;
 extern crate lzjd;
-#[macro_use]
-extern crate failure_derive;
 
 mod crc32;
 use murmurhash3::Murmur3HashState;
@@ -22,51 +20,35 @@ use clap::{App, Arg};
 use rayon::prelude::*;
 use walkdir::WalkDir;
 
-#[derive(Debug, Fail)]
+#[derive(Debug)]
 enum Error {
-    #[fail(display = "IO error: {}", err)]
-    Io {
-        #[cause]
-        err: io::Error,
-    },
-    #[fail(display = "Walkdir error: {}", err)]
-    Walkdir {
-        #[cause]
-        err: walkdir::Error,
-    },
-    #[fail(display = "ThreadPoolBuild error: {}", err)]
-    ThreadPoolBuild {
-        #[cause]
-        err: rayon::ThreadPoolBuildError,
-    },
-    #[fail(display = "{}", err)]
-    Lzjd {
-        #[cause]
-        err: LZJDError,
-    },
+    Io(String),
+    Walkdir(String),
+    ThreadPoolBuild(String),
+    Lzjd(LZJDError),
 }
 
 impl From<io::Error> for Error {
     fn from(err: io::Error) -> Self {
-        Error::Io { err }
+        Error::Io(err.to_string())
     }
 }
 
 impl From<walkdir::Error> for Error {
     fn from(err: walkdir::Error) -> Self {
-        Error::Walkdir { err }
+        Error::Walkdir(err.to_string())
     }
 }
 
 impl From<rayon::ThreadPoolBuildError> for Error {
     fn from(err: rayon::ThreadPoolBuildError) -> Self {
-        Error::ThreadPoolBuild { err }
+        Error::ThreadPoolBuild(err.to_string())
     }
 }
 
 impl From<LZJDError> for Error {
     fn from(err: LZJDError) -> Self {
-        Error::Lzjd { err }
+        Error::Lzjd(err)
     }
 }
 

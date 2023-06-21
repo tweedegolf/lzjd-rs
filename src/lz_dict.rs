@@ -190,7 +190,6 @@ impl Display for LZDict {
 mod tests {
     use crate::crc32::CRC32BuildHasher;
     use crate::lz_dict::LZDict;
-    use std::f64::EPSILON;
     use std::iter::*;
 
     fn is_sorted_and_unique<T: PartialOrd>(list: &[T]) -> bool {
@@ -263,27 +262,27 @@ mod tests {
 
         assert!(
             (a.jaccard_similarity(&a) - INTERSECTION_A_A_LEN as f64 / UNION_A_A_LEN as f64).abs()
-                < EPSILON
+                < f64::EPSILON
         );
         assert!(
             (a.jaccard_similarity(&b) - INTERSECTION_A_B_LEN as f64 / UNION_A_B_LEN as f64).abs()
-                < EPSILON
+                < f64::EPSILON
         );
         assert!(
             (a.jaccard_similarity(&c) - INTERSECTION_A_C_LEN as f64 / UNION_A_C_LEN as f64).abs()
-                < EPSILON
+                < f64::EPSILON
         );
         assert!(
             (a.jaccard_similarity(&d) - INTERSECTION_A_D_LEN as f64 / UNION_A_D_LEN as f64).abs()
-                < EPSILON
+                < f64::EPSILON
         );
         assert!(
             (a.jaccard_similarity(&e) - INTERSECTION_A_E_LEN as f64 / UNION_A_E_LEN as f64).abs()
-                < EPSILON
+                < f64::EPSILON
         );
         assert!(
             (a.jaccard_similarity(&f) - INTERSECTION_A_F_LEN as f64 / UNION_A_F_LEN as f64).abs()
-                < EPSILON
+                < f64::EPSILON
         );
     }
 }
