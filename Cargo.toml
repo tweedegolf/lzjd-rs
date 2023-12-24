@@ -14,7 +14,7 @@ repository = "https://github.com/tweedegolf/lzjd-rs"
 [dependencies]
 clap = "3.2"
 base64 = "0.13.1"
-murmurhash3 = { git = "https://github.com/malwaredb/murmurhash3-rs", branch = "update" }
+malwaredb-murmurhash3 = { version = "0.1.0" }
 bincode = "1.1.2"
 crc = "1.8.1"
 walkdir = "2.2.7"

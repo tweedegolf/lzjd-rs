@@ -266,7 +266,7 @@ fn gen_comp(paths: &[PathBuf], threshold: u32, writer: &mut dyn Write) -> Result
 
 /// Digest and print out the hashes for the given list of files
 fn hash_files(paths: &[PathBuf], writer: Option<&mut dyn Write>) -> Result<Vec<(LZDict, String)>> {
-    let build_hasher = Murmur3HashState::new();
+    let build_hasher = Murmur3HashState::default();
 
     let dicts: Result<Vec<(LZDict, String)>> = paths
         .par_iter()
