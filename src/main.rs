@@ -2,13 +2,9 @@ extern crate base64;
 extern crate bincode;
 extern crate clap;
 extern crate lzjd;
-#[macro_use]
-extern crate failure_derive;
 
 mod crc32;
-mod murmur3;
-
-use murmur3::Murmur3BuildHasher;
+use murmurhash3::Murmur3HashState;
 
 use lzjd::{LZDict, LZJDError};
 
@@ -24,51 +20,35 @@ use clap::{App, Arg};
 use rayon::prelude::*;
 use walkdir::WalkDir;
 
-#[derive(Debug, Fail)]
+#[derive(Debug)]
 enum Error {
-    #[fail(display = "IO error: {}", err)]
-    Io {
-        #[cause]
-        err: io::Error,
-    },
-    #[fail(display = "Walkdir error: {}", err)]
-    Walkdir {
-        #[cause]
-        err: walkdir::Error,
-    },
-    #[fail(display = "ThreadPoolBuild error: {}", err)]
-    ThreadPoolBuild {
-        #[cause]
-        err: rayon::ThreadPoolBuildError,
-    },
-    #[fail(display = "{}", err)]
-    LZJD {
-        #[cause]
-        err: LZJDError,
-    },
+    Io(String),
+    Walkdir(String),
+    ThreadPoolBuild(String),
+    Lzjd(LZJDError),
 }
 
 impl From<io::Error> for Error {
     fn from(err: io::Error) -> Self {
-        Error::Io { err }
+        Error::Io(err.to_string())
     }
 }
 
 impl From<walkdir::Error> for Error {
     fn from(err: walkdir::Error) -> Self {
-        Error::Walkdir { err }
+        Error::Walkdir(err.to_string())
     }
 }
 
 impl From<rayon::ThreadPoolBuildError> for Error {
     fn from(err: rayon::ThreadPoolBuildError) -> Self {
-        Error::ThreadPoolBuild { err }
+        Error::ThreadPoolBuild(err.to_string())
     }
 }
 
 impl From<LZJDError> for Error {
     fn from(err: LZJDError) -> Self {
-        Error::LZJD { err }
+        Error::Lzjd(err)
     }
 }
 
@@ -83,28 +63,28 @@ fn main() {
         .about("Calculates Lempel-Ziv Jaccard distance of input binaries. Based on jLZJD (https://github.com/EdwardRaff/jLZJD).")
         .arg(
             Arg::with_name("deep")
-                .short("r")
+                .short('r')
                 .long("deep")
                 .help("generate SDBFs from directories and files")
                 .takes_value(false),
         )
         .arg(
             Arg::with_name("compare")
-                .short("c")
+                .short('c')
                 .long("compare")
                 .help("compare SDBFs in file, or two SDBF files")
                 .takes_value(false),
         )
         .arg(
             Arg::with_name("gen-compare")
-                .short("g")
+                .short('g')
                 .long("gen-compare")
                 .help("compare all pairs in source data")
                 .takes_value(false),
         )
         .arg(
             Arg::with_name("threshold")
-                .short("t")
+                .short('t')
                 .long("threshold")
                 .help("only show results >= threshold")
                 .takes_value(true)
@@ -113,7 +93,7 @@ fn main() {
         )
         .arg(
             Arg::with_name("threads")
-                .short("p")
+                .short('p')
                 .long("--threads")
                 .help("restrict compute threads to N threads")
                 .takes_value(true)
@@ -122,7 +102,7 @@ fn main() {
         )
         .arg(
             Arg::with_name("output")
-                .short("o")
+                .short('o')
                 .long("output")
                 .help("send output to files")
                 .takes_value(true)
@@ -137,7 +117,7 @@ fn main() {
         )
         .get_matches();
     if let Err(e) = run(matches) {
-        eprintln!("{}", e);
+        eprintln!("{:?}", e);
         process::exit(-1);
     }
 }
@@ -160,9 +140,9 @@ fn run(matches: clap::ArgMatches) -> Result<()> {
         .unwrap();
 
     let input_paths: Vec<PathBuf> = if deep {
-        matches.args["input"]
-            .vals
-            .iter()
+        matches
+            .get_raw("input")
+            .expect("input is required")
             .map(PathBuf::from)
             .flat_map(WalkDir::new)
             .try_fold(
@@ -179,16 +159,18 @@ fn run(matches: clap::ArgMatches) -> Result<()> {
                 },
             )?
     } else {
-        matches.args["input"]
-            .vals
-            .iter()
+        matches
+            .get_raw("input")
+            .expect("input is required")
             .map(PathBuf::from)
             .collect()
     };
 
     let output_path = matches.value_of("output").map(PathBuf::from);
 
-    rayon::ThreadPoolBuilder::new().num_threads(num_threads).build_global()?;
+    rayon::ThreadPoolBuilder::new()
+        .num_threads(num_threads)
+        .build_global()?;
 
     let mut writer = create_out_writer(&output_path)?;
 
@@ -247,30 +229,24 @@ fn compare(
     threshold: u32,
     writer: &mut dyn Write,
 ) -> Result<()> {
-    let same = dicts_a as *const _ == dicts_b as *const _;
+    let same = std::ptr::eq(dicts_a, dicts_b);
     let similarities: Vec<(String, String, u32)> = dicts_a
         .par_iter()
         .enumerate()
-        .fold(
-            || vec![],
-            |mut v, (i, (dict_a, name_a))| {
-                let j_start = if same { i + 1 } else { 0 };
-                dicts_b.iter().skip(j_start).for_each(|(dict_b, name_b)| {
-                    let similarity = (dict_a.similarity(dict_b) * 100.).round() as u32;
-                    if similarity >= threshold {
-                        v.push((name_a.to_owned(), name_b.to_owned(), similarity));
-                    }
-                });
-                v
-            },
-        )
-        .reduce(
-            || vec![],
-            |mut v, mut r| {
-                v.append(&mut r);
-                v
-            },
-        );
+        .fold(Vec::new, |mut v, (i, (dict_a, name_a))| {
+            let j_start = if same { i + 1 } else { 0 };
+            dicts_b.iter().skip(j_start).for_each(|(dict_b, name_b)| {
+                let similarity = (dict_a.similarity(dict_b) * 100.).round() as u32;
+                if similarity >= threshold {
+                    v.push((name_a.to_owned(), name_b.to_owned(), similarity));
+                }
+            });
+            v
+        })
+        .reduce(Vec::new, |mut v, mut r| {
+            v.append(&mut r);
+            v
+        });
 
     similarities
         .iter()
@@ -290,41 +266,35 @@ fn gen_comp(paths: &[PathBuf], threshold: u32, writer: &mut dyn Write) -> Result
 
 /// Digest and print out the hashes for the given list of files
 fn hash_files(paths: &[PathBuf], writer: Option<&mut dyn Write>) -> Result<Vec<(LZDict, String)>> {
-    let build_hasher = Murmur3BuildHasher;
+    let build_hasher = Murmur3HashState::default();
 
     let dicts: Result<Vec<(LZDict, String)>> = paths
         .par_iter()
-        .try_fold(
-            || vec![],
-            |mut v, r| {
-                let file = File::open(r)?;
+        .try_fold(Vec::new, |mut v, r| {
+            let file = File::open(r)?;
 
-                let path_name = r.to_str().unwrap();
+            let path_name = r.to_str().unwrap();
 
-                let bytes = BufReader::new(file)
-                    .bytes()
-                    .map(std::result::Result::unwrap);
+            let bytes = BufReader::new(file)
+                .bytes()
+                .map(std::result::Result::unwrap);
 
-                v.push((
-                    LZDict::from_bytes_stream(bytes, &build_hasher),
-                    path_name.to_owned(),
-                ));
+            v.push((
+                LZDict::from_bytes_stream(bytes, &build_hasher),
+                path_name.to_owned(),
+            ));
 
-                Ok(v)
-            },
-        )
-        .try_reduce(
-            || vec![],
-            |mut v, mut results| {
-                v.append(&mut results);
-                Ok(v)
-            },
-        );
+            Ok(v)
+        })
+        .try_reduce(Vec::new, |mut v, mut results| {
+            v.append(&mut results);
+            Ok(v)
+        });
     let dicts = dicts?;
     if let Some(writer) = writer {
-        dicts.iter().try_for_each(|d| {
-            writer.write_fmt(format_args!("lzjd:{}:{}\n", d.1, d.0.to_string()))
-        })?;
+        dicts
+            .iter()
+            .try_for_each(|d| writer.write_fmt(format_args!("lzjd:{}:{}\n", d.1, d.0)))?;
     }
     Ok(dicts)
 }

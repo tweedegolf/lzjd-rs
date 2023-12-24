@@ -1,0 +1,29 @@
+name: Commisery
+on:
+  workflow_call:
+  pull_request:
+    types: [edited, opened, synchronize, reopened]
+
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# This workflow uses a third-party action.
+# The existence of a `permissions` key denies all
+# permissions except those explicitly specified.
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  commit-message:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run Commisery
+        uses: tomtom-international/commisery-action@33eb2d6e7dfc53e6d3d09ea20c639b8858f75021 # v2.19.3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          validate-pull-request: false
+          validate-pull-request-title-bump: false

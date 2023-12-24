@@ -3,6 +3,7 @@ use core::hash::BuildHasher;
 use core::hash::Hasher;
 use core::ops::Deref;
 use std::collections::HashSet;
+use std::fmt::{Display, Formatter};
 
 /// A sorted list of the k smallest LZSet hashes
 #[derive(Debug)]
@@ -36,18 +37,19 @@ impl LZDict {
     /// of LZ sequences obtained from seq_iter.
     /// Based on LZ78 as described in https://en.wikipedia.org/wiki/LZ77_and_LZ78#LZ78
     pub fn from_bytes_stream_lz78<I, H>(seq_iter: I, build_hasher: &H) -> Self
-        where
-            I: Iterator<Item=u8>,
-            H: BuildHasher,
+    where
+        I: Iterator<Item = u8>,
+        H: BuildHasher,
     {
         let mut dict: Vec<(usize, u8)> = Vec::new();
         let mut last_matching_index: usize = 0;
         dict.push((0, 0));
 
         for item in seq_iter {
-            if let Some(index) = dict.iter().position(
-                |(lmi, i)| lmi == &last_matching_index && i == &item
-            ) {
+            if let Some(index) = dict
+                .iter()
+                .position(|(lmi, i)| lmi == &last_matching_index && i == &item)
+            {
                 last_matching_index = index;
             } else {
                 dict.push((last_matching_index, item));
@@ -87,9 +89,9 @@ impl LZDict {
     }
 
     pub fn from_bytes_stream<I, H>(seq_iter: I, build_hasher: &H) -> Self
-        where
-            I: Iterator<Item=u8>,
-            H: BuildHasher,
+    where
+        I: Iterator<Item = u8>,
+        H: BuildHasher,
     {
         let mut dict = HashSet::new();
         let mut hasher = build_hasher.build_hasher();
@@ -105,7 +107,9 @@ impl LZDict {
         let mut dict: Vec<_> = dict.iter().cloned().collect();
         dict.sort();
 
-        LZDict { entries: dict.iter().cloned().take(1000).collect() }
+        LZDict {
+            entries: dict.iter().cloned().take(1000).collect(),
+        }
     }
 
     fn intersection_len(&self, other: &Self) -> usize {
@@ -136,16 +140,6 @@ impl LZDict {
         let union_len = self.len() + other.len() - intersection_len;
 
         intersection_len as f64 / union_len as f64
-    }
-
-    /// Encodes the contents of the dictionary to base64 and returns it as a string.
-    pub fn to_string(&self) -> String {
-        let bytes: Vec<u8> = self
-            .iter()
-            .map(|hash| bincode::serialize(&hash).unwrap())
-            .flatten()
-            .collect();
-        base64::encode(&bytes)
     }
 
     /// Calculates the LZ-distance of two LZ Dictionaries
@@ -181,11 +175,21 @@ impl From<LZDict> for Vec<i32> {
     }
 }
 
+impl Display for LZDict {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let bytes: Vec<u8> = self
+            .iter()
+            .flat_map(|hash| bincode::serialize(&hash).unwrap())
+            .collect();
+        let encoded = base64::encode(bytes);
+        write!(f, "{encoded}")
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::crc32::CRC32BuildHasher;
     use crate::lz_dict::LZDict;
-    use std::f64::EPSILON;
     use std::iter::*;
 
     fn is_sorted_and_unique<T: PartialOrd>(list: &[T]) -> bool {
@@ -258,27 +262,27 @@ mod tests {
 
         assert!(
             (a.jaccard_similarity(&a) - INTERSECTION_A_A_LEN as f64 / UNION_A_A_LEN as f64).abs()
-                < EPSILON
+                < f64::EPSILON
         );
         assert!(
             (a.jaccard_similarity(&b) - INTERSECTION_A_B_LEN as f64 / UNION_A_B_LEN as f64).abs()
-                < EPSILON
+                < f64::EPSILON
         );
         assert!(
             (a.jaccard_similarity(&c) - INTERSECTION_A_C_LEN as f64 / UNION_A_C_LEN as f64).abs()
-                < EPSILON
+                < f64::EPSILON
         );
         assert!(
             (a.jaccard_similarity(&d) - INTERSECTION_A_D_LEN as f64 / UNION_A_D_LEN as f64).abs()
-                < EPSILON
+                < f64::EPSILON
         );
         assert!(
             (a.jaccard_similarity(&e) - INTERSECTION_A_E_LEN as f64 / UNION_A_E_LEN as f64).abs()
-                < EPSILON
+                < f64::EPSILON
         );
         assert!(
             (a.jaccard_similarity(&f) - INTERSECTION_A_F_LEN as f64 / UNION_A_F_LEN as f64).abs()
-                < EPSILON
+                < f64::EPSILON
         );
     }
 }

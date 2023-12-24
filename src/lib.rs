@@ -53,63 +53,43 @@
 //! assert_eq!(lzjd, 0.5714285714285714);
 //! ```
 
-#[macro_use]
-extern crate failure_derive;
-
 pub use crate::lz_dict::LZDict;
-use std::io;
+pub use murmurhash3::Murmur3HashState;
 
-/// LZ dictionary implementation
-pub mod lz_dict;
 /// crc32 wrapper;
 pub mod crc32;
-/// murmur3 wrapper;
-pub mod murmur3;
+/// LZ dictionary implementation
+pub mod lz_dict;
 
-#[derive(Debug, Fail)]
+#[derive(Debug)]
 pub enum LZJDError {
-    #[fail(display = "IO error: {}", err)]
-    Io {
-        #[cause]
-        err: io::Error,
-    },
-    #[fail(display = "Decode error: {}", err)]
-    Base64 {
-        #[cause]
-        err: base64::DecodeError,
-    },
-    #[fail(display = "Bincode error: {}", err)]
-    Bincode {
-        #[cause]
-        err: bincode::Error,
-    },
-    #[fail(display = "Error: {}", msg)]
-    Msg { msg: String },
+    Io(String),
+    Base64(String),
+    Bincode(String),
+    Msg(String),
 }
 
 impl From<base64::DecodeError> for LZJDError {
     fn from(err: base64::DecodeError) -> Self {
-        LZJDError::Base64 { err }
+        LZJDError::Base64(err.to_string())
     }
 }
 
 impl From<bincode::Error> for LZJDError {
     fn from(err: bincode::Error) -> Self {
-        LZJDError::Bincode { err }
+        LZJDError::Bincode(err.to_string())
     }
 }
 
 impl From<std::io::Error> for LZJDError {
     fn from(err: std::io::Error) -> Self {
-        LZJDError::Io { err }
+        LZJDError::Io(err.to_string())
     }
 }
 
 impl<'a> From<&'a str> for LZJDError {
     fn from(msg: &'a str) -> Self {
-        LZJDError::Msg {
-            msg: msg.to_owned(),
-        }
+        LZJDError::Msg(msg.into())
     }
 }
 
@@ -119,7 +99,6 @@ pub type Result<T> = std::result::Result<T, LZJDError>;
 mod tests {
     use crate::crc32::CRC32BuildHasher;
     use crate::*;
-    use std::f64::EPSILON;
 
     #[test]
     fn test_optimized_dist() {
@@ -137,24 +116,24 @@ mod tests {
 
         let dist = dict_a.dist(&dict_b);
         assert!(
-            dist.abs() < EPSILON, // dist(a, b) == 0
+            dist.abs() < f64::EPSILON, // dist(a, b) == 0
             "Distance of equal sequences (a and b) should equal 0, was {}",
             dist
         );
         let dist = dict_a.dist(&dict_c);
         assert!(
-            (1. - dist).abs() < EPSILON, // dist(a, c) == 1
+            (1. - dist).abs() < f64::EPSILON, // dist(a, c) == 1
             "Distance of totally different sequences (a and c) should equal 1, was {}",
             dist
         );
         let dist = dict_a.dist(&dict_d);
         assert!(
-            (0.409_090_909_090_909_06 - dist).abs() < EPSILON, // dist(a, d) == 0.409_090_909_090_909_06
+            (0.409_090_909_090_909_06 - dist).abs() < f64::EPSILON, // dist(a, d) == 0.409_090_909_090_909_06
             "Distance of a and d should equal 0.40909090909090906, was {}",
             dist
         );
         assert!(
-            (dict_a.dist(&dict_d) - dict_d.dist(&dict_a)).abs() < EPSILON, // dist(a,d) == dist(d,a)
+            (dict_a.dist(&dict_d) - dict_d.dist(&dict_a)).abs() < f64::EPSILON, // dist(a,d) == dist(d,a)
             "Distance of a and d should be equal to distance of d and a"
         );
     }
